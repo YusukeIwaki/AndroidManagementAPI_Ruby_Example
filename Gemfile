@@ -2,4 +2,5 @@
 
 source "https://rubygems.org"
 
-gem 'jwt'
+gem 'googleauth'
+gem 'google-apis-androidmanagement_v1'

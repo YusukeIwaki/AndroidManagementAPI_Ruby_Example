@@ -1,30 +1,14 @@
 require_relative './service_account'
 
-require 'jwt'
-require 'openssl'
-require 'time'
+require 'googleauth'
+require 'stringio'
 
-now = Time.now.to_i
+def create_token
+  authorizer = Google::Auth::ServiceAccountCredentials.make_creds(
+    json_key_io: StringIO.new(service_account.to_json),
+    scope: 'https://www.googleapis.com/auth/androidmanagement'
+  )
+  authorizer.fetch_access_token!
+end
 
-claim = {
-  iss: service_account['client_email'],
-  scope: 'https://www.googleapis.com/auth/androidmanagement',
-  aud:"https://oauth2.googleapis.com/token",
-  iat: now,
-  exp: now + 3600
-}
-
-private_key = OpenSSL::PKey::RSA.new(service_account['private_key'])
-jwt = JWT.encode(claim, private_key, 'RS256')
-
-
-require 'net/http'
-
-response = Net::HTTP.post_form(
-  URI('https://oauth2.googleapis.com/token'),
-  {
-    grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-    assertion: jwt,
-  },
-)
-puts JSON.parse(response.body)
+puts create_token

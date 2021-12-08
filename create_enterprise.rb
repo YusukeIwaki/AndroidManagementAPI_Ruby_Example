@@ -1,18 +1,27 @@
-unless ENV['GOOGLE_AMAPI_TOKEN']
-  raise 'export GOOGLE_AMAPI_TOKEN=xxxx   is required.'
+require_relative './service_account'
+
+require 'googleauth'
+require 'stringio'
+
+def create_token_authorizer
+  authorizer = Google::Auth::ServiceAccountCredentials.make_creds(
+    json_key_io: StringIO.new(service_account.to_json),
+    scope: 'https://www.googleapis.com/auth/androidmanagement'
+  )
+  authorizer.fetch_access_token!
+  authorizer
 end
 
-require_relative './service_account'
-require 'net/http'
+require 'google/apis/androidmanagement_v1'
 
-response = Net::HTTP.post(
-  URI("https://androidmanagement.googleapis.com/v1/enterprises?agreementAccepted=true&projectId=#{service_account['project_id']}"),
-  { # post body
-    'enterpriseDisplayName': 'いわき家',
-  }.to_json,
-  { # header
-    'Content-Type' => 'application/json',
-    'Authorization' => "Bearer #{ENV['GOOGLE_AMAPI_TOKEN']}"
-  },
-)
-puts JSON.parse(response.body)
+def create_enterprise
+  client = Google::Apis::AndroidmanagementV1::AndroidManagementService.new
+  client.authorization = create_token_authorizer
+  enterprise_request = Google::Apis::AndroidmanagementV1::Enterprise.new
+  enterprise_request.enterprise_display_name = 'いわき家'
+  client.create_enterprise(enterprise_request,
+            project_id: service_account['project_id'],
+            agreement_accepted: true)
+end
+
+puts create_enterprise.inspect
